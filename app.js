@@ -56,8 +56,6 @@ searchBtn.addEventListener('click', async () => {
 });
 
 async function fetchAllProducts(storeId) {
-    let totalPages = 1;
-    
     try {
         const firstPageUrl = getTrendyolUrl(storeId, 1);
         const response = await fetch(firstPageUrl);
@@ -66,57 +64,49 @@ async function fetchAllProducts(storeId) {
         const rawBody = await response.text();
 
         if (!contentType.includes("application/json")) {
-            // Extract title if it's HTML
             const titleMatch = rawBody.match(/<title>(.*?)<\/title>/i);
             const title = titleMatch ? titleMatch[1] : "Başlık Bulunamadı";
-            
             debugContent.value = `### KRİTİK HATA: SERVİS JSON YERİNE HTML DÖNDÜRDÜ ###\n\n` +
                                  `Yanıt Başlığı: ${title}\n` +
-                                 `İçerik Tipi: ${contentType}\n` +
                                  `URL: ${firstPageUrl}\n\n` +
-                                 `--- RAW YANIT (İLK 5000 KARAKTER) ---\n\n` + 
-                                 rawBody.substring(0, 5000);
+                                 `--- RAW YANIT ---\n\n` + rawBody.substring(0, 5000);
             throw new Error(`JSON yerine HTML geldi.`);
         }
 
-        let data;
-        try {
-            data = JSON.parse(rawBody);
-        } catch (e) {
-            debugContent.value = `### PARSE HATASI ###\n\n` + rawBody;
-            throw new Error("JSON Parse Hatası");
-        }
+        const data = JSON.parse(rawBody);
         
         if (data.error) {
             debugContent.value = `### API HATASI ###\n\n` + JSON.stringify(data, null, 2);
             throw new Error(data.error);
         }
 
-        if (data.result && data.result.products) {
-            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 360);
-            totalPages = Math.ceil(roughTotalCount / 24);
-            processProducts(data.result.products);
-            
-            const pagePromises = [];
-            for (let p = 2; p <= totalPages; p++) {
-                pagePromises.push(
-                    fetch(getTrendyolUrl(storeId, p)).then(async res => {
-                        const json = await res.json();
-                        return json;
-                    }).catch(e => null)
-                );
-            }
-            
-            const results = await Promise.all(pagePromises);
-            results.forEach(res => {
-                if (res && res.result && res.result.products) {
-                    processProducts(res.result.products);
-                }
-            });
+        const products = data.products || [];
+        const totalCount = data.total || 0;
+        const totalPages = Math.min(Math.ceil(totalCount / 24), 10); // Güvenlik için max 10 sayfa
+
+        if (products.length > 0) {
+            processProducts(products);
         }
+
+        // Diğer sayfaları çek
+        const pagePromises = [];
+        for (let p = 2; p <= totalPages; p++) {
+            pagePromises.push(
+                fetch(getTrendyolUrl(storeId, p))
+                    .then(res => res.json())
+                    .then(pageData => {
+                        if (pageData && pageData.products) {
+                            processProducts(pageData.products);
+                        }
+                    })
+                    .catch(e => console.error(`Sayfa ${p} hatası:`, e))
+            );
+        }
+        await Promise.all(pagePromises);
+
     } catch (e) {
         if (!debugContent.value.startsWith('#')) {
-            debugContent.value = `### BİLİNMEYEN HATA ###\n\n` + e.message;
+            debugContent.value = `### HATA ###\n\n` + e.message;
         }
         throw e;
     }
