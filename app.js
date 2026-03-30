@@ -12,6 +12,8 @@ const productCountBadge = document.getElementById('productCount');
 const copyAllLinksBtn = document.getElementById('copyAllLinks');
 const copyAllBarcodesBtn = document.getElementById('copyAllBarcodes');
 const exportCsvBtn = document.getElementById('exportCsv');
+const debugSection = document.getElementById('debugSection');
+const debugContent = document.getElementById('debugContent');
 
 let allProducts = [];
 
@@ -25,6 +27,7 @@ searchBtn.addEventListener('click', async () => {
     startLoading();
     allProducts = [];
     productsGrid.innerHTML = '';
+    debugSection.style.display = 'none';
     
     try {
         await fetchAllProducts(storeId);
@@ -47,7 +50,9 @@ searchBtn.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error('Fetch error:', error);
-        alert(`Hata: ${error.message}\n\nYerel'de deniyorsanız 'vercel dev' kullanın. Vercel'deyseniz API'de bir sorun oluşmuş olabilir.`);
+        alert(`Hata: ${error.message}\n\nDetaylı hata yanıtı sayfanın en altına eklendi.`);
+        debugSection.style.display = 'block';
+        lucide.createIcons();
     } finally {
         stopLoading();
     }
@@ -60,36 +65,32 @@ async function fetchAllProducts(storeId) {
         const firstPageUrl = getTrendyolUrl(storeId, 1);
         const response = await fetch(firstPageUrl);
         
-        // Yanıt JSON değilse hata verelim
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            const text = await response.text();
-            throw new Error(`Servis JSON yerine HTML döndürdü. (Local'de 'npm run dev' yerine 'vercel dev' kullanın veya Vercel linkine girin)`);
+            const rawBody = await response.text();
+            debugContent.value =  "Header: " + contentType + "\n\nRaw Body:\n" + rawBody;
+            throw new Error(`Servis JSON yerine HTML döndürdü.`);
         }
 
         const data = await response.json();
         
         if (data.error) {
+            debugContent.value =  "API Error: " + JSON.stringify(data, null, 2);
             throw new Error(data.error);
         }
 
         if (data.result && data.result.products) {
-            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 240); // Demo limiti
+            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 240);
             totalPages = Math.ceil(roughTotalCount / 24);
-            
             processProducts(data.result.products);
             
-            // Diğer sayfaları çekelim
             const pagePromises = [];
             for (let p = 2; p <= totalPages; p++) {
                 pagePromises.push(
                     fetch(getTrendyolUrl(storeId, p)).then(async res => {
                         const json = await res.json();
                         return json;
-                    }).catch(e => {
-                        console.warn(`Sayfa ${p} çekilemedi:`, e);
-                        return null;
-                    })
+                    }).catch(e => null)
                 );
             }
             
@@ -101,7 +102,6 @@ async function fetchAllProducts(storeId) {
             });
         }
     } catch (e) {
-        console.error("Fetch All Error: ", e);
         throw e;
     }
 }
@@ -177,9 +177,7 @@ function stopLoading() {
 }
 
 window.copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-        // Notification logic would go here
-    });
+    navigator.clipboard.writeText(text).then(() => {});
 };
 
 copyAllLinksBtn.addEventListener('click', () => {
