@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   // Sfint servisine (Masaüstünde çalışan o URL) geri dönüyoruz
-  const trendyolUrl = `https://apigw.trendyol.com/discovery-sfint-search-service/api/search/products?wb=104932&os=1&mid=${mid}&pathModel=sr&channelId=1&storefrontId=1&culture=tr-TR&pi=${pi || 1}`;
+  const trendyolUrl = `https://apigw.trendyol.com/discovery-sfint-search-service/api/search/products?wb=104932&os=1&mid=432496&pathModel=sr&channelId=1&storefrontId=1&culture=tr-TR`;
 
   try {
     const response = await fetch(trendyolUrl, {
@@ -33,9 +33,9 @@ export default async function handler(req, res) {
     if (response.ok) {
       return res.status(200).json(data);
     } else {
-      return res.status(response.status).json({ 
-        error: 'Trendyol API hatası.', 
-        detail: data 
+      return res.status(response.status).json({
+        error: 'Trendyol API hatası.',
+        detail: data
       });
     }
   } catch (err) {
