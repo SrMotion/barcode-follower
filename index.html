@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarcodeFollower Pro | Trendyol Ürün Takip</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts included in style.css -->
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-section">
+                <h1>BarcodeFollower <span style="color: var(--accent);">Pro</span></h1>
+                <p>Mağaza bazlı ürün ve barkod otomasyonu</p>
+            </div>
+            <div id="statsContainer" style="display: none;">
+                <span class="stats-badge" id="productCount">0 Ürün Bulundu</span>
+            </div>
+        </header>
+
+        <section class="search-section">
+            <div class="input-group">
+                <input type="text" id="storeIdInput" placeholder="Trendyol Mağaza ID (Örn: 152263)" value="152263">
+            </div>
+            <button class="search-btn" id="searchBtn">
+                <i data-lucide="search"></i>
+                Mağazayı Tara
+            </button>
+        </section>
+
+        <div class="loader" id="loader"></div>
+
+        <div class="actions-section" id="actionsHeader" style="display: none;">
+            <div class="bulk-actions">
+                <button class="btn-secondary" id="copyAllLinks">
+                    <i data-lucide="link"></i>
+                    Linkleri Kopyala
+                </button>
+                <button class="btn-secondary" id="copyAllBarcodes">
+                    <i data-lucide="barcode"></i>
+                    Barkodları Kopyala
+                </button>
+                <button class="btn-secondary" id="exportCsv">
+                    <i data-lucide="download"></i>
+                    CSV İndir
+                </button>
+            </div>
+            <div class="view-options">
+                <span class="text-secondary" style="font-size: 0.8rem;">Görünüm: <b>Galeri</b></span>
+            </div>
+        </div>
+        </div>
+
+        <main class="products-grid" id="productsGrid">
+            <!-- Ürünler buraya dinamik olarak gelecek -->
+            <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <i data-lucide="store" size="48" style="margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>Mağaza ID girerek tarama başlatın</p>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+</body>
+</html>
