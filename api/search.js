@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   const { mid, pi } = req.query;
 
   if (!mid) {
-    return res.status(400).json({ error: 'mid (Store ID) is required' });
+    return res.status(400).json({ error: 'mid (Mağaza ID) gereklidir.' });
   }
 
   const page = pi || 1;
@@ -17,19 +17,31 @@ export default async function handler(req, res) {
       }
     });
 
+    const contentType = response.headers.get("content-type");
+    
+    if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Trendyol JSON yerine HTML veya farklı bir format döndürdü.");
+        return res.status(500).json({ 
+            error: "Trendyol API yanıtı geçersiz (JSON değil).", 
+            message: "Trendyol bot kontrolüne takılmış olabilir veya geçici bir hata oluştu.",
+            detail: text.substring(0, 100)
+        });
+    }
+
     if (!response.ok) {
-      return res.status(response.status).json({ error: 'Trendyol API error' });
+        return res.status(response.status).json({ error: 'Trendyol API hatası: ' + response.statusText });
     }
 
     const data = await response.json();
     
-    // Set CORS headers just in case for local development
+    // Vercel Cache-Control (Opsiyonel: 1 saat cacheleyebilirsin)
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
     
     return res.status(200).json(data);
   } catch (error) {
-    console.error('Proxy error:', error);
-    return res.status(500).json({ error: 'Internal server error while fetching from Trendyol' });
+    console.error('Proxy Hatası:', error);
+    return res.status(500).json({ error: 'Sunucu hatası: ' + error.message });
   }
 }
