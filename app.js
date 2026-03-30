@@ -1,3 +1,4 @@
+// web/app.js
 // Initialize Lucide Icons
 lucide.createIcons();
 
@@ -46,38 +47,55 @@ searchBtn.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error('Fetch error:', error);
-        alert('Veri çekilirken bir hata oluştu. CORS kısıtlamaları veya yanlış Mağaza ID olabilir.');
+        alert(`Hata: ${error.message}\n\nYerel'de deniyorsanız 'vercel dev' kullanın. Vercel'deyseniz API'de bir sorun oluşmuş olabilir.`);
     } finally {
         stopLoading();
     }
 });
 
 async function fetchAllProducts(storeId) {
-    let currentPage = 1;
     let totalPages = 1;
     
     try {
-        // First page to get total count
         const firstPageUrl = getTrendyolUrl(storeId, 1);
         const response = await fetch(firstPageUrl);
+        
+        // Yanıt JSON değilse hata verelim
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            throw new Error(`Servis JSON yerine HTML döndürdü. (Local'de 'npm run dev' yerine 'vercel dev' kullanın veya Vercel linkine girin)`);
+        }
+
         const data = await response.json();
         
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
         if (data.result && data.result.products) {
-            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 120); // Limit during demo
+            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 240); // Demo limiti
             totalPages = Math.ceil(roughTotalCount / 24);
             
-            // Add first page products
             processProducts(data.result.products);
             
-            // Fetch remaining pages
+            // Diğer sayfaları çekelim
             const pagePromises = [];
             for (let p = 2; p <= totalPages; p++) {
-                pagePromises.push(fetch(getTrendyolUrl(storeId, p)).then(res => res.json()));
+                pagePromises.push(
+                    fetch(getTrendyolUrl(storeId, p)).then(async res => {
+                        const json = await res.json();
+                        return json;
+                    }).catch(e => {
+                        console.warn(`Sayfa ${p} çekilemedi:`, e);
+                        return null;
+                    })
+                );
             }
             
             const results = await Promise.all(pagePromises);
             results.forEach(res => {
-                if (res.result && res.result.products) {
+                if (res && res.result && res.result.products) {
                     processProducts(res.result.products);
                 }
             });
@@ -90,7 +108,6 @@ async function fetchAllProducts(storeId) {
 
 function processProducts(products) {
     products.forEach(p => {
-        // Try to get barcode from various potential fields in search API
         let barcode = 'Bilinmiyor';
         if (p.variants && p.variants[0] && p.variants[0].barcode) {
             barcode = p.variants[0].barcode;
@@ -112,7 +129,6 @@ function processProducts(products) {
 }
 
 function getTrendyolUrl(mid, pi) {
-    // Calling our Vercel Serverless Function proxy to bypass CORS
     return `/api/search?mid=${mid}&pi=${pi}`;
 }
 
@@ -163,7 +179,6 @@ function stopLoading() {
 window.copyToClipboard = (text) => {
     navigator.clipboard.writeText(text).then(() => {
         // Notification logic would go here
-        console.log('Copied:', text);
     });
 };
 

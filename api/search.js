@@ -1,8 +1,9 @@
+// web/api/search.js
 export default async function handler(req, res) {
   const { mid, pi } = req.query;
 
   if (!mid) {
-    return res.status(400).json({ error: 'mid (Mağaza ID) gereklidir.' });
+    return res.status(400).json({ error: 'mid (Mağaza ID) eksik.' });
   }
 
   const page = pi || 1;
@@ -10,38 +11,36 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(trendyolUrl, {
+      method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'application/json',
         'Referer': 'https://www.trendyol.com/'
       }
     });
 
-    const contentType = response.headers.get("content-type");
-    
-    if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.error("Trendyol JSON yerine HTML veya farklı bir format döndürdü.");
-        return res.status(500).json({ 
-            error: "Trendyol API yanıtı geçersiz (JSON değil).", 
-            message: "Trendyol bot kontrolüne takılmış olabilir veya geçici bir hata oluştu.",
-            detail: text.substring(0, 100)
-        });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    if (!isJson) {
+      const text = await response.text();
+      return res.status(500).json({ 
+        error: 'Trendyol API JSON döndürmedi. (HTML Yanıtı Aldınız)', 
+        detail: text.substring(0, 500) // Detaylı debug için
+      });
     }
 
     if (!response.ok) {
-        return res.status(response.status).json({ error: 'Trendyol API hatası: ' + response.statusText });
+      return res.status(response.status).json({ error: `Trendyol Hatası: ${response.statusText}` });
     }
 
     const data = await response.json();
     
-    // Vercel Cache-Control (Opsiyonel: 1 saat cacheleyebilirsin)
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+    // CORS ayarlarını Vercel API için veriyoruz
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept');
     
     return res.status(200).json(data);
-  } catch (error) {
-    console.error('Proxy Hatası:', error);
-    return res.status(500).json({ error: 'Sunucu hatası: ' + error.message });
+  } catch (err) {
+    return res.status(500).json({ error: 'Sunucu hatası: ' + err.message });
   }
 }
