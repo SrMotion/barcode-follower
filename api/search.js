@@ -5,17 +5,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Mağaza ID gerekli.' });
   }
 
-  // Vercel Yurtdışında olduğu için ana motor olan 'web-searchgw' servisini deniyoruz
-  // Bu servis yurtdışı IP'lerine bazen daha esnek davranabiliyor
-  const trendyolUrl = `https://apigw.trendyol.com/discovery-web-searchgw-service/v2/api/infinite-scroll/sr?mid=${mid}&pi=${pi || 1}&culture=tr-TR&userGenderId=1&pId=0&isLegalRequirementConfirmed=true&searchStrategyType=DEFAULT`;
+  // Sfint servisine (Masaüstünde çalışan o URL) geri dönüyoruz
+  const trendyolUrl = `https://apigw.trendyol.com/discovery-sfint-search-service/api/search/products?wb=104932&os=1&mid=${mid}&pathModel=sr&channelId=1&storefrontId=1&culture=tr-TR&pi=${pi || 1}`;
 
   try {
     const response = await fetch(trendyolUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
         'Accept': 'application/json',
-        'Accept-Language': 'tr-TR,tr;q=0.9',
         'X-Domain': 'TR',
         'X-Platform': 'web',
         'X-Culture': 'tr-TR',
@@ -33,13 +31,7 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (response.ok) {
-      // Eğer bu API'den farklı bir yapı dönerse frontend'i ona göre besliyoruz
-      // discovery-web servisi için result.products şeklinde döner
-      const normalizedData = {
-        products: data.result ? data.result.products : (data.products || []),
-        totalCount: data.result ? data.result.roughTotalCount : (data.total || 0)
-      };
-      return res.status(200).json(normalizedData);
+      return res.status(200).json(data);
     } else {
       return res.status(response.status).json({ 
         error: 'Trendyol API hatası.', 
