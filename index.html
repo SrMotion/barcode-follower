@@ -29,6 +29,20 @@
             </button>
         </section>
 
+        <!-- Debug / Hata Detayı Alanı (En Tepeye Alındı) -->
+        <div id="debugSection" style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: rgba(239, 68, 68, 0.15); border: 2px solid var(--danger); border-radius: 16px; animation: fadeInUp 0.5s ease-out;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="color: var(--danger); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <i data-lucide="bug"></i> HATA ANALİZİ
+                </h4>
+                <button class="btn-secondary" onclick="document.getElementById('debugContent').select(); document.execCommand('copy'); alert('Kopyalandı!');">
+                    Kopyala
+                </button>
+            </div>
+            <textarea id="debugContent" readonly style="width: 100%; height: 350px; background: #000; color: #0f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.4;"></textarea>
+            <p style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.8rem;">İpucu: Yukarıdaki metnin tamamını kopyalayıp bana gönder kanka.</p>
+        </div>
+
         <div class="loader" id="loader"></div>
 
         <div class="actions-section" id="actionsHeader" style="display: none;">
@@ -46,9 +60,6 @@
                     CSV İndir
                 </button>
             </div>
-            <div class="view-options">
-                <span class="text-secondary" style="font-size: 0.8rem;">Görünüm: <b>Galeri</b></span>
-            </div>
         </div>
 
         <main class="products-grid" id="productsGrid">
@@ -57,14 +68,6 @@
                 <p>Mağaza ID girerek tarama başlatın</p>
             </div>
         </main>
-
-        <!-- Debug / Hata Detayı Alanı -->
-        <div id="debugSection" style="display: none; margin-top: 3rem; padding: 1.5rem; background: rgba(239, 68, 68, 0.1); border: 1px dashed var(--danger); border-radius: 16px;">
-            <h4 style="color: var(--danger); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i data-lucide="alert-circle"></i> Sunucudan Gelen Hata Detayı (Bunu Kopyalayıp Atın):
-            </h4>
-            <textarea id="debugContent" readonly style="width: 100%; height: 300px; background: rgba(0,0,0,0.3); color: #cbd5e1; border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.8rem;"></textarea>
-        </div>
     </div>
 
     <script type="module" src="/app.js"></script>

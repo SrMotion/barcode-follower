@@ -1,5 +1,4 @@
 // web/app.js
-// Initialize Lucide Icons
 lucide.createIcons();
 
 const searchBtn = document.getElementById('searchBtn');
@@ -28,6 +27,7 @@ searchBtn.addEventListener('click', async () => {
     allProducts = [];
     productsGrid.innerHTML = '';
     debugSection.style.display = 'none';
+    debugContent.value = 'Hata analiz ediliyor...';
     
     try {
         await fetchAllProducts(storeId);
@@ -36,23 +36,20 @@ searchBtn.addEventListener('click', async () => {
             productsGrid.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-secondary);">
                     <i data-lucide="frown" size="48" style="margin-bottom: 1rem; opacity: 0.5;"></i>
-                    <p>Ürün bulunamadı veya bir hata oluştu. Mağaza ID'yi kontrol edin.</p>
+                    <p>Ürün bulunamadı. Mağaza ID'yi kontrol edin.</p>
                 </div>
             `;
             actionsHeader.style.display = 'none';
-            statsContainer.style.display = 'none';
         } else {
             renderProducts();
             actionsHeader.style.display = 'flex';
-            statsContainer.style.display = 'block';
             productCountBadge.textContent = `${allProducts.length} Ürün Bulundu`;
             lucide.createIcons();
         }
     } catch (error) {
         console.error('Fetch error:', error);
-        alert(`Hata: ${error.message}\n\nDetaylı hata yanıtı sayfanın en altına eklendi.`);
         debugSection.style.display = 'block';
-        lucide.createIcons();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
         stopLoading();
     }
@@ -65,22 +62,38 @@ async function fetchAllProducts(storeId) {
         const firstPageUrl = getTrendyolUrl(storeId, 1);
         const response = await fetch(firstPageUrl);
         
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            const rawBody = await response.text();
-            debugContent.value =  "Header: " + contentType + "\n\nRaw Body:\n" + rawBody;
-            throw new Error(`Servis JSON yerine HTML döndürdü.`);
+        const contentType = response.headers.get("content-type") || "";
+        const rawBody = await response.text();
+
+        if (!contentType.includes("application/json")) {
+            // Extract title if it's HTML
+            const titleMatch = rawBody.match(/<title>(.*?)<\/title>/i);
+            const title = titleMatch ? titleMatch[1] : "Başlık Bulunamadı";
+            
+            debugContent.value = `### KRİTİK HATA: SERVİS JSON YERİNE HTML DÖNDÜRDÜ ###\n\n` +
+                                 `Yanıt Başlığı: ${title}\n` +
+                                 `İçerik Tipi: ${contentType}\n` +
+                                 `URL: ${firstPageUrl}\n\n` +
+                                 `--- RAW YANIT (İLK 5000 KARAKTER) ---\n\n` + 
+                                 rawBody.substring(0, 5000);
+            throw new Error(`JSON yerine HTML geldi.`);
         }
 
-        const data = await response.json();
+        let data;
+        try {
+            data = JSON.parse(rawBody);
+        } catch (e) {
+            debugContent.value = `### PARSE HATASI ###\n\n` + rawBody;
+            throw new Error("JSON Parse Hatası");
+        }
         
         if (data.error) {
-            debugContent.value =  "API Error: " + JSON.stringify(data, null, 2);
+            debugContent.value = `### API HATASI ###\n\n` + JSON.stringify(data, null, 2);
             throw new Error(data.error);
         }
 
         if (data.result && data.result.products) {
-            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 240);
+            const roughTotalCount = Math.min(data.result.roughTotalCount || 0, 360);
             totalPages = Math.ceil(roughTotalCount / 24);
             processProducts(data.result.products);
             
@@ -102,6 +115,9 @@ async function fetchAllProducts(storeId) {
             });
         }
     } catch (e) {
+        if (!debugContent.value.startsWith('#')) {
+            debugContent.value = `### BİLİNMEYEN HATA ###\n\n` + e.message;
+        }
         throw e;
     }
 }
@@ -121,7 +137,6 @@ function processProducts(products) {
             url: 'https://www.trendyol.com' + p.url,
             image: p.images && p.images[0] ? 'https://cdn.dsmcdn.com/' + p.images[0] : (p.imageAlt || ''),
             price: p.price ? p.price.discountedPrice : 0,
-            originalPrice: p.price ? p.price.sellingPrice : 0,
             barcode: barcode,
             brand: p.brand ? p.brand.name : 'Unknown'
         });
@@ -183,13 +198,13 @@ window.copyToClipboard = (text) => {
 copyAllLinksBtn.addEventListener('click', () => {
     const links = allProducts.map(p => p.url).join('\n');
     copyToClipboard(links);
-    alert('Tüm ürün linkleri (' + allProducts.length + ') kopyalandı!');
+    alert('Tüm ürün linkleri kopyalandı!');
 });
 
 copyAllBarcodesBtn.addEventListener('click', () => {
     const barcodes = allProducts.map(p => p.barcode).join('\n');
     copyToClipboard(barcodes);
-    alert('Tüm barkodlar (' + allProducts.length + ') kopyalandı!');
+    alert('Tüm barkodlar kopyalandı!');
 });
 
 
